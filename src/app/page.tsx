@@ -16,7 +16,7 @@ export default function Home() {
       } else {
         router.push('/login');
       }
-    }, 1000); // 1000ms — within the 800–2000ms required range
+    }, 1000); 
 
     return () => clearTimeout(timer);
   }, [router]);

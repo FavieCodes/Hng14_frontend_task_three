@@ -6,7 +6,7 @@ import { Habit } from '@/types/habit';
 
 type Props = {
   initial?: Habit;
-  onSave: (data: { name: string; description: string; frequency: 'daily' }) => void;
+  onSave: (data: { name: string; description: string; frequency: string }) => void;
   onCancel: () => void;
 };
 
@@ -24,7 +24,8 @@ export default function HabitForm({ initial, onSave, onCancel }: Props) {
       return;
     }
     setNameError('');
-    onSave({ name: result.value, description, frequency: 'daily' });
+    // frequency is now passed correctly from state
+    onSave({ name: result.value, description, frequency });
   }
 
   return (
