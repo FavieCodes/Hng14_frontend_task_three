@@ -9,7 +9,9 @@ const APP_SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => {
+      return Promise.allSettled(APP_SHELL.map((url) => cache.add(url)));
+    })
   );
   self.skipWaiting();
 });
@@ -24,9 +26,28 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).catch(() => caches.match('/'));
+      if (cached) return cached;
+      return fetch(event.request)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+          }
+          return res;
+        })
+        .catch(() => {
+          return (
+            caches.match('/login') ||
+            caches.match('/') ||
+            new Response('<h1>Offline</h1>', {
+              headers: { 'Content-Type': 'text/html' },
+            })
+          );
+        });
     })
   );
 });

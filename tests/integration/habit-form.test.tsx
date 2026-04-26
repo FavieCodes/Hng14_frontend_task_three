@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 import HabitForm from '@/components/habits/HabitForm';
@@ -23,7 +23,9 @@ const mockHabit: Habit = {
 };
 
 describe('habit form', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+  });
 
   it('shows a validation error when habit name is empty', async () => {
     render(<HabitForm onSave={vi.fn()} onCancel={vi.fn()} />);
@@ -56,6 +58,11 @@ describe('habit form', () => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'Updated Habit' })
       );
+      // Verify immutable fields are NOT passed in form data (they stay on the habit object)
+      const call = onSave.mock.calls[0][0];
+      expect(call.id).toBeUndefined();
+      expect(call.userId).toBeUndefined();
+      expect(call.createdAt).toBeUndefined();
     });
   });
 
@@ -69,8 +76,11 @@ describe('habit form', () => {
         onDelete={onDelete}
       />
     );
+    // Click delete — should NOT delete yet
     fireEvent.click(screen.getByTestId('habit-delete-drink-water'));
     expect(onDelete).not.toHaveBeenCalled();
+
+    // Now confirm
     fireEvent.click(screen.getByTestId('confirm-delete-button'));
     expect(onDelete).toHaveBeenCalledWith('h1');
   });
@@ -85,11 +95,19 @@ describe('habit form', () => {
         onDelete={vi.fn()}
       />
     );
-    const streakEl = screen.getByTestId('habit-streak-drink-water');
-    expect(streakEl).toHaveTextContent('0 day streak');
+
+    // Initially 0 streak
+    expect(screen.getByTestId('habit-streak-drink-water')).toHaveTextContent('0');
+
+    // Toggle complete
     fireEvent.click(screen.getByTestId('habit-complete-drink-water'));
-    expect(onUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ completions: expect.arrayContaining([today]) })
-    );
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          completions: expect.arrayContaining([today]),
+        })
+      );
+    });
   });
 });

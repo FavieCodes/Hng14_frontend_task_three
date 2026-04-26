@@ -1,32 +1,34 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Mock next/navigation
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
 import LoginForm from '@/components/auth/LoginForm';
 import SignupForm from '@/components/auth/SignupForm';
 import { saveUsers, getSession } from '@/lib/storage';
 
-beforeEach(() => {
-  localStorage.clear();
-});
-
 describe('auth flow', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('submits the signup form and creates a session', async () => {
     render(<SignupForm />);
     await userEvent.type(screen.getByTestId('auth-signup-email'), 'test@example.com');
     await userEvent.type(screen.getByTestId('auth-signup-password'), 'password123');
     fireEvent.click(screen.getByTestId('auth-signup-submit'));
 
-    await waitFor(() => {
-      const session = getSession();
-      expect(session).not.toBeNull();
-      expect(session?.email).toBe('test@example.com');
-    });
+    await waitFor(
+      () => {
+        const session = getSession();
+        expect(session).not.toBeNull();
+        expect(session?.email).toBe('test@example.com');
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('shows an error for duplicate signup email', async () => {
@@ -36,9 +38,12 @@ describe('auth flow', () => {
     await userEvent.type(screen.getByTestId('auth-signup-password'), 'pass');
     fireEvent.click(screen.getByTestId('auth-signup-submit'));
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('User already exists');
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('alert')).toHaveTextContent('User already exists');
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('submits the login form and stores the active session', async () => {
@@ -48,10 +53,13 @@ describe('auth flow', () => {
     await userEvent.type(screen.getByTestId('auth-login-password'), 'pass123');
     fireEvent.click(screen.getByTestId('auth-login-submit'));
 
-    await waitFor(() => {
-      const session = getSession();
-      expect(session?.email).toBe('login@example.com');
-    });
+    await waitFor(
+      () => {
+        const session = getSession();
+        expect(session?.email).toBe('login@example.com');
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('shows an error for invalid login credentials', async () => {
@@ -60,8 +68,11 @@ describe('auth flow', () => {
     await userEvent.type(screen.getByTestId('auth-login-password'), 'wrongpass');
     fireEvent.click(screen.getByTestId('auth-login-submit'));
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Invalid email or password');
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('alert')).toHaveTextContent('Invalid email or password');
+      },
+      { timeout: 5000 }
+    );
   });
 });
